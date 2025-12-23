@@ -1,0 +1,11 @@
+export { default as SalesDashboard } from './SalesDashboard';
+export { default as SalesDashboardPage } from './SalesDashboardPage';
+export { default as SalesManagerDashboard } from './SalesManagerDashboard';
+export { default as AccountExecutiveDashboard } from './AccountExecutiveDashboard';
+export { default as ContactsPage } from './ContactsPage';
+export { default as ContactDetailPage } from './ContactDetailPage';
+export { default as LeadsPage } from './LeadsPage';
+export { default as LeadDetailPage } from './LeadDetailPage';
+export { default as PipelinePage } from './PipelinePage';
+export { default as DealDetailPage } from './DealDetailPage';
+export { default as QuotesPage } from './QuotesPage';

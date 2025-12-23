@@ -1,0 +1,116 @@
+{
+  "name": "aprils-pestcontrol-dashboard",
+  "version": "0.1.0",
+  "description": "Enterprise CRM platform for pest control companies - better than Salesforce",
+  "private": true,
+  "workspaces": [
+    "src/frontend",
+    "src/backend",
+    "src/shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm:dev:*\"",
+    "dev:frontend": "npm run dev --workspace=src/frontend",
+    "dev:backend": "npm run dev --workspace=src/backend",
+    "dev:local": "npm run docker:up && npm run docker:logs",
+    "build": "npm run build --workspaces",
+    "build:backend": "npm run build --workspace=src/backend",
+    "build:frontend": "npm run build --workspace=src/frontend",
+    "test": "npm run test --workspaces",
+    "test:coverage": "npm run test:coverage --workspaces",
+    "test:integration": "npm run test:integration --workspace=src/backend",
+    "test:e2e": "npm run test:e2e --workspace=tests/e2e",
+    "test:watch": "npm run test -- --watch",
+    "test:all": "npm run lint && npm run test && npm run test:integration",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "lint:backend": "npm run lint --workspace=src/backend",
+    "lint:frontend": "npm run lint --workspace=src/frontend",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,json,md}\"",
+    "typecheck": "npm run typecheck --workspaces",
+    "typecheck:backend": "cd src/backend && npx tsc --noEmit",
+    "typecheck:frontend": "cd src/frontend && npx tsc --noEmit",
+    "db:create": "node scripts/db-create.js",
+    "db:migrate": "npm run migrate --workspace=src/backend",
+    "db:migrate:revert": "npm run migrate:revert --workspace=src/backend",
+    "db:migrate:show": "npm run migrate:show --workspace=src/backend",
+    "db:migration:create": "npm run migration:create --workspace=src/backend",
+    "db:migration:generate": "npm run migration:generate --workspace=src/backend",
+    "db:seed": "npm run seed --workspace=src/backend",
+    "db:reset": "node scripts/db-reset.js",
+    "db:drop": "node scripts/db-drop.js",
+    "db:status": "node scripts/db-status.js",
+    "db:shell": "docker-compose exec postgres psql -U postgres -d pestcontrol_dev",
+    "docker:up": "docker-compose up -d",
+    "docker:up:build": "docker-compose up -d --build",
+    "docker:down": "docker-compose down",
+    "docker:down:volumes": "docker-compose down -v",
+    "docker:logs": "docker-compose logs -f",
+    "docker:logs:backend": "docker-compose logs -f backend",
+    "docker:logs:frontend": "docker-compose logs -f frontend",
+    "docker:logs:db": "docker-compose logs -f postgres",
+    "docker:restart": "docker-compose restart",
+    "docker:restart:backend": "docker-compose restart backend",
+    "docker:restart:frontend": "docker-compose restart frontend",
+    "docker:ps": "docker-compose ps",
+    "docker:clean": "npm run docker:down:volumes && docker system prune -f",
+    "docker:db": "docker-compose up -d postgres redis",
+    "docker:tools": "docker-compose --profile tools up -d pgadmin redis-commander",
+    "docker:prod": "docker-compose -f docker-compose.prod.yml up -d",
+    "docker:prod:build": "docker-compose -f docker-compose.prod.yml up -d --build",
+    "docker:prod:down": "docker-compose -f docker-compose.prod.yml down",
+    "docker:health": "docker-compose ps && curl -f http://localhost:4000/health && curl -f http://localhost:8080",
+    "deploy:dev": "./scripts/deploy-dev.sh",
+    "deploy:localhost": "./scripts/deploy-localhost.sh",
+    "setup": "cp .env.example .env && npm install && npm run docker:up:build",
+    "setup:local": "npm install && npm run db:migrate && npm run db:seed",
+    "clean": "npm run docker:clean && rm -rf node_modules */*/node_modules */*/dist */*/build",
+    "prepare": "husky install",
+    "precommit": "lint-staged",
+    "validate": "npm run format:check && npm run lint && npm run typecheck && npm run test"
+  },
+  "keywords": [
+    "crm",
+    "pest-control",
+    "field-service",
+    "scheduling",
+    "routing",
+    "compliance"
+  ],
+  "author": "CompassIQ",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "concurrently": "^8.2.0",
+    "eslint": "^8.50.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-react": "^7.33.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "husky": "^8.0.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.2.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aprils-pestcontrol/dashboard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aprils-pestcontrol/dashboard/issues"
+  },
+  "homepage": "https://github.com/aprils-pestcontrol/dashboard#readme"
+}

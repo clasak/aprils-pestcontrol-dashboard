@@ -1,0 +1,95 @@
+# Cursor Rules for April's Pest Control Dashboard
+
+## UI Design Requirements
+
+**CRITICAL: Always use design skills when changing the UI**
+
+When making any UI changes, modifications, or additions, you MUST:
+
+1. **Reference the Design System**
+   - Always consult `/docs/DESIGN_SYSTEM.md` before making UI changes
+   - Follow the color palette, typography, spacing, and component specifications
+   - Use theme values from Material-UI theme configuration
+   - Never hard-code colors, spacing, or typography values
+
+2. **Follow UI Patterns**
+   - Reference `/docs/UI_PATTERNS.md` for layout patterns and component usage
+   - Use established patterns for forms, tables, modals, and navigation
+   - Maintain consistency with existing UI patterns across all modules
+
+3. **Use Component Library**
+   - Reference `/docs/COMPONENT_LIBRARY.md` for reusable components
+   - Prefer using existing shared components over creating new ones
+   - Follow component specifications and prop interfaces
+   - Maintain component architecture and file structure
+
+4. **Design Principles**
+   - **Professional & Clean**: Enterprise-grade software appearance
+   - **User-Centric**: Minimize cognitive load, optimize for task completion
+   - **Consistent**: Unified patterns across all modules
+   - **Accessible**: WCAG 2.1 AA compliant (color contrast, keyboard navigation, screen readers)
+   - **Responsive**: Mobile-first design with progressive enhancement
+
+5. **Before Making UI Changes**
+   - Read relevant design documentation
+   - Check existing similar components for patterns
+   - Verify color contrast ratios meet accessibility standards
+   - Ensure responsive behavior at all breakpoints
+   - Test keyboard navigation and screen reader support
+
+6. **Material-UI Best Practices**
+   - Use Material-UI components from `@mui/material`
+   - Apply theme values via `sx` prop or `theme` object
+   - Use responsive breakpoints: xs, sm, md, lg, xl
+   - Follow Material Design elevation and shadow guidelines
+   - Use proper semantic HTML and ARIA attributes
+
+7. **Spacing & Layout**
+   - Use 8px grid system (theme.spacing)
+   - Maintain consistent padding and margins
+   - Follow responsive grid patterns (12-column grid)
+   - Use proper container max-widths
+
+8. **Color Usage**
+   - Primary actions: `primary.main` (#1976d2)
+   - Success states: `success.main` (#4caf50)
+   - Warning states: `warning.main` (#ff9800)
+   - Error states: `error.main` (#f44336)
+   - Never use color alone to convey information
+
+9. **Typography**
+   - Use theme typography variants (h1-h6, body1, body2, caption, etc.)
+   - Follow type scale and font weight guidelines
+   - Maintain proper heading hierarchy
+
+10. **Component Styling**
+    - Use `sx` prop for styling (preferred)
+    - Use theme values: `theme.palette`, `theme.spacing`, `theme.typography`
+    - Apply consistent border radius, elevation, and transitions
+    - Follow animation and transition timing guidelines
+
+## Code Quality
+
+- Use TypeScript for all new code
+- Follow existing code patterns and architecture
+- Write self-documenting code with clear variable names
+- Add JSDoc comments for complex functions
+- Maintain consistent file structure
+
+## Testing
+
+- Test UI changes at all responsive breakpoints
+- Verify accessibility (keyboard navigation, screen readers)
+- Check color contrast ratios
+- Test with real data, not just placeholders
+
+## Documentation
+
+- Update relevant documentation when adding new patterns or components
+- Document any deviations from the design system
+- Include usage examples in component documentation
+
+---
+
+**Remember: Design is not optional. Every UI change must follow the design system and established patterns.**
+

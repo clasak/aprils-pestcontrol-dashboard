@@ -1,0 +1,58 @@
+# Production Dockerfile for Backend (NestJS)
+FROM node:20-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY src/backend/package*.json ./src/backend/
+COPY src/shared/package*.json ./src/shared/
+
+# Install all dependencies
+RUN npm ci
+
+# Copy source code
+COPY src/backend ./src/backend
+COPY src/shared ./src/shared
+
+# Build backend
+WORKDIR /app/src/backend
+RUN npm run build
+
+# Production stage
+FROM node:20-alpine
+
+RUN apk add --no-cache dumb-init
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY src/backend/package*.json ./src/backend/
+COPY src/shared/package*.json ./src/shared/
+
+# Install production dependencies only
+RUN npm ci --production
+
+# Copy built application from builder
+COPY --from=builder /app/src/backend/dist ./src/backend/dist
+COPY --from=builder /app/src/shared ./src/shared
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+USER nodejs
+
+EXPOSE 4000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
+  CMD node -e "require('http').get('http://localhost:4000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); })"
+
+WORKDIR /app/src/backend
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "dist/main.js"]

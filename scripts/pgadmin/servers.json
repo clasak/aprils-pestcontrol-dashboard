@@ -1,0 +1,16 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "April's Pest Control - Development",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "pestcontrol_dev",
+      "Username": "postgres",
+      "Password": "password",
+      "SSLMode": "prefer",
+      "Comment": "Development database for pest control CRM",
+      "DBRestriction": "pestcontrol_dev"
+    }
+  }
+}
