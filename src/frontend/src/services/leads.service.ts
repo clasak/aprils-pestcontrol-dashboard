@@ -54,8 +54,26 @@ export const leadsService = {
         page: filters?.page,
         limit: filters?.limit,
       });
+      // Transform mock data from camelCase to snake_case to match database types
+      const transformedData = mockResponse.data.map((lead: any) => ({
+        id: lead.id,
+        org_id: lead.companyId,
+        first_name: lead.contact?.firstName || '',
+        last_name: lead.contact?.lastName || '',
+        email: lead.contact?.email || '',
+        phone: lead.contact?.phone || null,
+        company_name: lead.contact?.companyName || '',
+        job_title: lead.contact?.jobTitle || null,
+        lead_source: lead.leadSource || 'website',
+        status: lead.status,
+        lead_score: lead.leadScore || 0,
+        assigned_to: lead.assignedTo || null,
+        notes: lead.notes || null,
+        created_at: lead.createdAt,
+        updated_at: lead.updatedAt,
+      }));
       return {
-        data: mockResponse.data as unknown as Lead[],
+        data: transformedData as Lead[],
         count: mockResponse.pagination.total,
         page: mockResponse.pagination.page,
         limit: mockResponse.pagination.limit,
