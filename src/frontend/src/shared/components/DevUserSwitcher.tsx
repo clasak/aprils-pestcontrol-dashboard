@@ -96,8 +96,8 @@ export const DevUserSwitcher: React.FC = () => {
     window.location.reload();
   };
 
-  // Only show in development mode
-  const isDev = import.meta.env.DEV || localStorage.getItem('auth_token') === 'dev_mock_token';
+  // Only show in development mode - strictly check environment
+  const isDev = import.meta.env.MODE === 'development';
   
   if (!isDev) return null;
 

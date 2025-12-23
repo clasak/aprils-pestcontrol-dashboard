@@ -23,8 +23,8 @@ import adminRoutes from '@modules/admin/routes';
 // Protected Route wrapper component
 const ProtectedRoute = () => {
   // DEV MODE: Set mock token for development without backend
-  // Remove this in production
-  const DEV_MODE = true;
+  // Only active in development mode, automatically disabled in production
+  const DEV_MODE = import.meta.env.MODE === 'development';
   if (DEV_MODE && !localStorage.getItem('auth_token')) {
     localStorage.setItem('auth_token', 'dev_mock_token');
   }
