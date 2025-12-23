@@ -2,10 +2,15 @@
  * Leads Service
  * 
  * Supabase-based service for managing leads.
+ * Supports mock data mode for development/demo purposes.
  */
 
 import { supabase } from '../lib/supabase';
+import { mockLeadsApi } from '../modules/sales/mocks/mockSalesApi';
 import type { Lead, LeadInsert, LeadUpdate, LeadStatus } from '../lib/database.types';
+
+// Use mock data for development/demo - matches opportunitiesService
+const USE_MOCK_DATA = true;
 
 export interface LeadFilters {
   search?: string;
@@ -39,6 +44,25 @@ export const leadsService = {
    * Get all leads with optional filtering
    */
   async getAll(filters?: LeadFilters): Promise<LeadsResponse> {
+    // Use mock data for consistent demo experience
+    if (USE_MOCK_DATA) {
+      const mockResponse = await mockLeadsApi.getAll({
+        search: filters?.search,
+        status: filters?.status as any,
+        minScore: filters?.minScore,
+        maxScore: filters?.maxScore,
+        page: filters?.page,
+        limit: filters?.limit,
+      });
+      return {
+        data: mockResponse.data as unknown as Lead[],
+        count: mockResponse.pagination.total,
+        page: mockResponse.pagination.page,
+        limit: mockResponse.pagination.limit,
+        totalPages: mockResponse.pagination.totalPages,
+      };
+    }
+
     const page = filters?.page || 1;
     const limit = filters?.limit || 25;
     const offset = (page - 1) * limit;
@@ -270,6 +294,17 @@ export const leadsService = {
    * Get lead statistics
    */
   async getStatistics(): Promise<LeadStatistics> {
+    // Use mock data for consistent demo experience
+    if (USE_MOCK_DATA) {
+      const mockStats = await mockLeadsApi.getStatistics();
+      return {
+        total: mockStats.data.total,
+        byStatus: mockStats.data.byStatus as Record<LeadStatus, number>,
+        conversionRate: mockStats.data.conversionRate,
+        averageScore: mockStats.data.averageScore,
+      };
+    }
+
     const { data, error } = await supabase
       .from('leads')
       .select('status, lead_score');

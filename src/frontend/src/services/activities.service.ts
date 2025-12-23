@@ -2,10 +2,14 @@
  * Activities Service
  * 
  * Supabase-based service for managing activities (calls, emails, meetings, tasks).
+ * Supports mock data mode for development/demo purposes.
  */
 
 import { supabase } from '../lib/supabase';
 import type { Activity, ActivityInsert, ActivityUpdate, ActivityType } from '../lib/database.types';
+
+// Use mock data for development/demo - matches opportunitiesService
+const USE_MOCK_DATA = true;
 
 export interface ActivityFilters {
   search?: string;
@@ -298,6 +302,24 @@ export const activitiesService = {
    * Get activity statistics
    */
   async getStatistics(ownerId?: string): Promise<ActivityStatistics> {
+    // Use mock data for consistent demo experience
+    if (USE_MOCK_DATA) {
+      return {
+        total: 42,
+        byType: {
+          call: 15,
+          email: 12,
+          meeting: 8,
+          task: 5,
+          note: 2,
+        },
+        completed: 28,
+        overdue: 3,
+        dueToday: 4,
+        dueThisWeek: 7,
+      };
+    }
+
     const today = new Date().toISOString().split('T')[0];
     const endOfWeek = new Date();
     endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()));
