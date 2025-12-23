@@ -2,9 +2,11 @@
  * Opportunities Service
  * 
  * Supabase-based service for managing opportunities (deals).
+ * Supports mock data mode for development/demo purposes.
  */
 
 import { supabase } from '../lib/supabase';
+import { mockOpportunitiesApi } from '../modules/sales/mocks/mockSalesApi';
 import type { 
   Opportunity, 
   OpportunityInsert, 
@@ -13,6 +15,9 @@ import type {
   OpportunityStatus,
   ForecastCategory 
 } from '../lib/database.types';
+
+// Use mock data for development/demo - this ensures dashboards show the same data as Pipeline
+const USE_MOCK_DATA = true;
 
 export interface OpportunityFilters {
   search?: string;
@@ -143,6 +148,11 @@ export const opportunitiesService = {
    * Get open opportunities (for pipeline view)
    */
   async getOpen(ownerId?: string): Promise<Opportunity[]> {
+    // Use mock data for consistent demo experience
+    if (USE_MOCK_DATA) {
+      return mockOpportunitiesApi.getOpen(ownerId) as Promise<Opportunity[]>;
+    }
+
     let query = supabase
       .from('opportunities')
       .select(`
@@ -272,6 +282,11 @@ export const opportunitiesService = {
    * Get pipeline summary by stage
    */
   async getPipelineSummary(ownerId?: string): Promise<PipelineSummary[]> {
+    // Use mock data for consistent demo experience
+    if (USE_MOCK_DATA) {
+      return mockOpportunitiesApi.getPipelineSummary(ownerId) as Promise<PipelineSummary[]>;
+    }
+
     let query = supabase
       .from('opportunities')
       .select('stage, amount, weighted_amount')
@@ -304,6 +319,11 @@ export const opportunitiesService = {
    * Get opportunities without next step
    */
   async getWithoutNextStep(ownerId?: string): Promise<Opportunity[]> {
+    // Use mock data for consistent demo experience
+    if (USE_MOCK_DATA) {
+      return mockOpportunitiesApi.getWithoutNextStep(ownerId) as Promise<Opportunity[]>;
+    }
+
     let query = supabase
       .from('opportunities')
       .select(`
@@ -328,6 +348,11 @@ export const opportunitiesService = {
    * Get stalled opportunities (no activity in X days)
    */
   async getStalled(days = 7, ownerId?: string): Promise<Opportunity[]> {
+    // Use mock data for consistent demo experience
+    if (USE_MOCK_DATA) {
+      return mockOpportunitiesApi.getStalled(days, ownerId) as Promise<Opportunity[]>;
+    }
+
     const stalledDate = new Date();
     stalledDate.setDate(stalledDate.getDate() - days);
 
@@ -355,6 +380,11 @@ export const opportunitiesService = {
    * Get opportunity statistics
    */
   async getStatistics(ownerId?: string): Promise<OpportunityStatistics> {
+    // Use mock data for consistent demo experience
+    if (USE_MOCK_DATA) {
+      return mockOpportunitiesApi.getStatistics(ownerId);
+    }
+
     const firstOfMonth = new Date();
     firstOfMonth.setDate(1);
     firstOfMonth.setHours(0, 0, 0, 0);

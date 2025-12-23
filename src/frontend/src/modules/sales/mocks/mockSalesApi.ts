@@ -814,3 +814,168 @@ export const resetMockData = () => {
   initializeMockData();
 };
 
+// ============================================================================
+// OPPORTUNITIES MOCK API (Maps Deals to Opportunities format)
+// ============================================================================
+
+export const mockOpportunitiesApi = {
+  /**
+   * Get pipeline summary by stage (for dashboards)
+   */
+  async getPipelineSummary(ownerId?: string): Promise<Array<{ stage: string; count: number; totalValue: number; weightedValue: number }>> {
+    await delay();
+    const deals = getDeals();
+    
+    // Filter by owner if specified (for demo, we don't have owner_id, so skip filtering)
+    const openDeals = deals.filter(d => !['closed_won', 'closed_lost'].includes(d.stage));
+    
+    const stages = ['lead', 'inspection_scheduled', 'inspection_completed', 'quote_sent', 'negotiation', 'verbal_commitment', 'contract_sent'];
+    
+    return stages.map(stage => {
+      const stageDeals = openDeals.filter(d => d.stage === stage);
+      return {
+        stage,
+        count: stageDeals.length,
+        totalValue: stageDeals.reduce((sum, d) => sum + d.dealValueCents, 0),
+        weightedValue: stageDeals.reduce((sum, d) => sum + Math.round(d.dealValueCents * d.winProbability / 100), 0),
+      };
+    });
+  },
+
+  /**
+   * Get opportunity statistics (for dashboards)
+   */
+  async getStatistics(ownerId?: string): Promise<{
+    totalOpen: number;
+    totalValue: number;
+    weightedValue: number;
+    wonThisMonth: number;
+    wonValueThisMonth: number;
+    lostThisMonth: number;
+    winRate: number;
+    avgDealSize: number;
+    avgSalesCycle: number;
+  }> {
+    await delay();
+    const deals = getDeals();
+    
+    const openDeals = deals.filter(d => !['closed_won', 'closed_lost'].includes(d.stage));
+    const wonDeals = deals.filter(d => d.stage === 'closed_won');
+    const lostDeals = deals.filter(d => d.stage === 'closed_lost');
+    
+    const totalValue = openDeals.reduce((sum, d) => sum + d.dealValueCents, 0);
+    const weightedValue = openDeals.reduce((sum, d) => sum + Math.round(d.dealValueCents * d.winProbability / 100), 0);
+    
+    // Get deals from this month
+    const firstOfMonth = new Date();
+    firstOfMonth.setDate(1);
+    firstOfMonth.setHours(0, 0, 0, 0);
+    
+    const wonThisMonth = wonDeals.filter(d => d.actualCloseDate && new Date(d.actualCloseDate) >= firstOfMonth);
+    const lostThisMonth = lostDeals.filter(d => d.actualCloseDate && new Date(d.actualCloseDate) >= firstOfMonth);
+    
+    const closedDeals = wonDeals.length + lostDeals.length;
+    const winRate = closedDeals > 0 ? Math.round((wonDeals.length / closedDeals) * 100) : 0;
+    
+    const avgDealSize = wonDeals.length > 0 
+      ? Math.round(wonDeals.reduce((sum, d) => sum + d.dealValueCents, 0) / wonDeals.length)
+      : 0;
+
+    return {
+      totalOpen: openDeals.length,
+      totalValue,
+      weightedValue,
+      wonThisMonth: wonThisMonth.length,
+      wonValueThisMonth: wonThisMonth.reduce((sum, d) => sum + d.dealValueCents, 0),
+      lostThisMonth: lostThisMonth.length,
+      winRate,
+      avgDealSize,
+      avgSalesCycle: 21, // Mock average of 21 days
+    };
+  },
+
+  /**
+   * Get stalled opportunities (no activity in X days)
+   */
+  async getStalled(days: number = 7, ownerId?: string): Promise<any[]> {
+    await delay();
+    const deals = getDeals();
+    
+    const stalledDate = new Date();
+    stalledDate.setDate(stalledDate.getDate() - days);
+    
+    const openDeals = deals.filter(d => !['closed_won', 'closed_lost'].includes(d.stage));
+    const stalledDeals = openDeals.filter(d => {
+      if (!d.lastActivityDate) return true;
+      return new Date(d.lastActivityDate) < stalledDate;
+    });
+    
+    // Map to opportunity-like format
+    return stalledDeals.slice(0, 10).map(d => ({
+      id: d.id,
+      name: d.title,
+      stage: d.stage,
+      amount: d.dealValueCents,
+      expected_close_date: d.expectedCloseDate,
+      last_activity_at: d.lastActivityDate,
+      account: d.contact ? { id: d.contactId, name: d.contact.companyName || `${d.contact.firstName} ${d.contact.lastName}` } : null,
+      owner: null,
+    }));
+  },
+
+  /**
+   * Get opportunities without next step
+   */
+  async getWithoutNextStep(ownerId?: string): Promise<any[]> {
+    await delay();
+    const deals = getDeals();
+    
+    const today = new Date().toISOString().split('T')[0];
+    const openDeals = deals.filter(d => !['closed_won', 'closed_lost'].includes(d.stage));
+    
+    const noNextStep = openDeals.filter(d => {
+      // No next follow up date, or it's in the past
+      if (!d.nextFollowUpDate) return true;
+      return d.nextFollowUpDate < today;
+    });
+    
+    // Map to opportunity-like format
+    return noNextStep.slice(0, 10).map(d => ({
+      id: d.id,
+      name: d.title,
+      stage: d.stage,
+      amount: d.dealValueCents,
+      expected_close_date: d.expectedCloseDate,
+      next_step: null,
+      next_step_date: d.nextFollowUpDate,
+      account: d.contact ? { id: d.contactId, name: d.contact.companyName || `${d.contact.firstName} ${d.contact.lastName}` } : null,
+      owner: null,
+    }));
+  },
+
+  /**
+   * Get all open opportunities (for pipeline view)
+   */
+  async getOpen(ownerId?: string): Promise<any[]> {
+    await delay();
+    const deals = getDeals();
+    
+    const openDeals = deals.filter(d => !['closed_won', 'closed_lost'].includes(d.stage));
+    
+    // Map to opportunity-like format
+    return openDeals.map(d => ({
+      id: d.id,
+      name: d.title,
+      stage: d.stage,
+      status: 'open',
+      amount: d.dealValueCents,
+      weighted_amount: Math.round(d.dealValueCents * d.winProbability / 100),
+      probability: d.winProbability,
+      expected_close_date: d.expectedCloseDate,
+      account: d.contact ? { id: d.contactId, name: d.contact.companyName || `${d.contact.firstName} ${d.contact.lastName}` } : null,
+      contact: d.contact ? { id: d.contactId, first_name: d.contact.firstName, last_name: d.contact.lastName } : null,
+      owner: null,
+    }));
+  },
+};
+
