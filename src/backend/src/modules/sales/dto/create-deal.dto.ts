@@ -20,9 +20,9 @@ import {
 } from '../entities/deal.entity';
 
 export class CreateDealDto {
-  @ApiProperty({ description: 'Company ID' })
+  @ApiProperty({ description: 'Organization ID' })
   @IsUUID()
-  companyId: string;
+  orgId: string;
 
   @ApiProperty({ description: 'Contact ID' })
   @IsUUID()
@@ -88,10 +88,10 @@ export class CreateDealDto {
   @IsOptional()
   expectedCloseDate?: string;
 
-  @ApiPropertyOptional({ description: 'Assigned to user ID' })
+  @ApiPropertyOptional({ description: 'Owner user ID' })
   @IsUUID()
   @IsOptional()
-  assignedTo?: string;
+  ownerId?: string;
 
   @ApiPropertyOptional({ description: 'Sales rep ID' })
   @IsUUID()

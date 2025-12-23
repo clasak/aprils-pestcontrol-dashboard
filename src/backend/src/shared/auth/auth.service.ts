@@ -1,223 +1,220 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+/**
+ * Auth Service
+ * 
+ * CompassIQ Hybrid Architecture:
+ * This service handles authentication using Supabase Auth.
+ * - Login/logout via Supabase Auth
+ * - Profile management
+ * - Password reset via Supabase
+ */
+
+import { Injectable, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcrypt';
+import { SupabaseService } from './supabase.service';
 import { RegisterDto } from './dto/register.dto';
-
-// Mock user storage (in production, use database)
-interface MockUser {
-  id: string;
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  avatar?: string;
-  companyId: string;
-  createdAt: Date;
-}
-
-// In-memory user store for MVP demo
-const mockUsers: Map<string, MockUser> = new Map();
-
-// Initialize with a demo user
-const initDemoUser = async () => {
-  const hashedPassword = await bcrypt.hash('Demo123!@#', 10);
-  mockUsers.set('demo@aprilspestcontrol.com', {
-    id: 'user-001',
-    email: 'demo@aprilspestcontrol.com',
-    password: hashedPassword,
-    firstName: 'April',
-    lastName: 'Johnson',
-    role: 'admin',
-    avatar: undefined,
-    companyId: 'company-001',
-    createdAt: new Date(),
-  });
-};
-
-// Initialize demo user
-initDemoUser();
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private jwtService: JwtService,
     private configService: ConfigService,
+    private supabaseService: SupabaseService,
   ) {}
 
+  /**
+   * Validate user credentials with Supabase
+   */
   async validateUser(email: string, password: string): Promise<any> {
-    // Look up user
-    const user = mockUsers.get(email.toLowerCase());
+    const supabase = this.supabaseService.getClient();
+    
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    if (user && await bcrypt.compare(password, user.password)) {
-      const { password: _, ...result } = user;
-      return result;
+    if (error) {
+      this.logger.warn(`Login failed for ${email}: ${error.message}`);
+      return null;
     }
-    return null;
+
+    // Get the application user
+    const appUser = await this.supabaseService.getAppUser(data.user.id);
+    
+    if (!appUser) {
+      this.logger.warn(`No app user found for Supabase user: ${data.user.id}`);
+      return null;
+    }
+
+    return {
+      ...appUser,
+      session: data.session,
+    };
   }
 
+  /**
+   * Login user and return tokens
+   */
   async login(user: any) {
-    const payload = {
-      email: user.email,
-      sub: user.id,
-      role: user.role,
-      companyId: user.companyId,
-    };
-
-    const refreshPayload = {
-      sub: user.id,
-      type: 'refresh',
-    };
-
+    // If called after validateUser, we already have the session
     return {
       success: true,
       data: {
-        accessToken: this.jwtService.sign(payload),
-        refreshToken: this.jwtService.sign(refreshPayload, {
-          secret: this.configService.get('auth.jwtRefresh.secret') || 'refresh-secret',
-          expiresIn: this.configService.get('auth.jwtRefresh.expiresIn') || '7d',
-        }),
-        expiresIn: 3600, // 1 hour in seconds
+        accessToken: user.session.access_token,
+        refreshToken: user.session.refresh_token,
+        expiresIn: user.session.expires_in,
+        expiresAt: user.session.expires_at,
         user: {
           id: user.id,
+          authUserId: user.authUserId,
+          orgId: user.orgId,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
           role: user.role,
-          avatar: user.avatar,
-          companyId: user.companyId,
+          avatar: null, // TODO: Add avatar support
         },
       },
     };
   }
 
+  /**
+   * Register a new user
+   */
   async register(registerDto: RegisterDto) {
     const email = registerDto.email.toLowerCase();
-
-    // Check if user exists
-    if (mockUsers.has(email)) {
-      throw new BadRequestException('A user with this email already exists');
-    }
 
     // Validate password strength
     if (registerDto.password.length < 8) {
       throw new BadRequestException('Password must be at least 8 characters long');
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(registerDto.password, 10);
-
     // Parse name
     const nameParts = registerDto.name.split(' ');
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
-    // Create user
-    const newUser: MockUser = {
-      id: `user-${Date.now()}`,
+    // Sign up with Supabase Auth
+    const supabase = this.supabaseService.getClient();
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
-      password: hashedPassword,
-      firstName,
-      lastName,
-      role: registerDto.role || 'user',
-      avatar: undefined,
-      companyId: 'company-001', // Default company for demo
-      createdAt: new Date(),
+      password: registerDto.password,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+        },
+      },
+    });
+
+    if (authError) {
+      this.logger.error(`Registration failed: ${authError.message}`);
+      throw new BadRequestException(authError.message);
+    }
+
+    if (!authData.user) {
+      throw new BadRequestException('Failed to create user');
+    }
+
+    // The user record will be created by the database trigger (auth.users -> public.users)
+    // But for now, we'll create it manually if needed
+    
+    // TODO: Get org_id from registration or create new org
+    // For now, we'll need to handle this during onboarding
+    
+    return {
+      success: true,
+      message: 'Registration successful. Please check your email to verify your account.',
+      data: {
+        user: {
+          id: authData.user.id,
+          email: authData.user.email,
+        },
+      },
     };
-
-    mockUsers.set(email, newUser);
-
-    // Auto-login after registration
-    const { password: _, ...userWithoutPassword } = newUser;
-    return this.login(userWithoutPassword);
   }
 
+  /**
+   * Refresh access token
+   */
   async refreshToken(refreshToken: string) {
-    try {
-      const payload = this.jwtService.verify(refreshToken, {
-        secret: this.configService.get('auth.jwtRefresh.secret') || 'refresh-secret',
-      });
+    const supabase = this.supabaseService.getClient();
+    
+    const { data, error } = await supabase.auth.refreshSession({
+      refresh_token: refreshToken,
+    });
 
-      if (payload.type !== 'refresh') {
-        throw new UnauthorizedException('Invalid token type');
-      }
-
-      // Find user by ID
-      let foundUser: MockUser | undefined;
-      mockUsers.forEach((user) => {
-        if (user.id === payload.sub) {
-          foundUser = user;
-        }
-      });
-
-      if (!foundUser) {
-        throw new UnauthorizedException('User not found');
-      }
-
-      const { password: _, ...userWithoutPassword } = foundUser;
-
-      const newPayload = {
-        email: userWithoutPassword.email,
-        sub: userWithoutPassword.id,
-        role: userWithoutPassword.role,
-        companyId: userWithoutPassword.companyId,
-      };
-
-      return {
-        success: true,
-        data: {
-          accessToken: this.jwtService.sign(newPayload),
-          expiresIn: 3600,
-        },
-      };
-    } catch (error) {
+    if (error) {
+      this.logger.warn(`Token refresh failed: ${error.message}`);
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
-  }
-
-  async getProfile(user: any) {
-    // Find full user data
-    const fullUser = mockUsers.get(user.email);
-
-    if (!fullUser) {
-      throw new UnauthorizedException('User not found');
-    }
-
-    const { password: _, ...userWithoutPassword } = fullUser;
 
     return {
       success: true,
-      data: userWithoutPassword,
+      data: {
+        accessToken: data.session?.access_token,
+        refreshToken: data.session?.refresh_token,
+        expiresIn: data.session?.expires_in,
+      },
     };
   }
 
+  /**
+   * Get user profile
+   */
+  async getProfile(user: any) {
+    // User is already populated from JWT validation
+    const organization = await this.supabaseService.getOrganization(user.orgId);
+
+    return {
+      success: true,
+      data: {
+        id: user.id,
+        authUserId: user.authUserId,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        status: user.status,
+        organization: organization ? {
+          id: organization.id,
+          name: organization.name,
+          logoUrl: organization.logo_url,
+        } : null,
+      },
+    };
+  }
+
+  /**
+   * Logout user
+   */
   async logout(user: any) {
-    // In production, invalidate the token in Redis/database
-    // For MVP, just return success
+    const supabase = this.supabaseService.getClient();
+    
+    await supabase.auth.signOut();
+
     return {
       success: true,
       message: 'Logged out successfully',
     };
   }
 
+  /**
+   * Request password reset
+   */
   async forgotPassword(email: string) {
-    const user = mockUsers.get(email.toLowerCase());
+    const supabase = this.supabaseService.getClient();
+    
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${this.configService.get('FRONTEND_URL') || 'http://localhost:3000'}/auth/reset-password`,
+    });
 
-    // Always return success for security (don't reveal if email exists)
-    if (!user) {
-      return {
-        success: true,
-        message: 'If an account exists with this email, a password reset link has been sent.',
-      };
+    if (error) {
+      this.logger.warn(`Password reset request failed: ${error.message}`);
+      // Don't reveal if email exists
     }
-
-    // In production:
-    // 1. Generate reset token
-    // 2. Store token with expiration
-    // 3. Send email with reset link
-    // For MVP, just log
-    console.log(`Password reset requested for: ${email}`);
 
     return {
       success: true,
@@ -225,17 +222,23 @@ export class AuthService {
     };
   }
 
+  /**
+   * Reset password with token
+   */
   async resetPassword(token: string, newPassword: string) {
-    // In production:
-    // 1. Verify token exists and is not expired
-    // 2. Find user by token
-    // 3. Hash new password
-    // 4. Update user password
-    // 5. Invalidate token
-
-    // For MVP, just validate the password
     if (newPassword.length < 8) {
       throw new BadRequestException('Password must be at least 8 characters long');
+    }
+
+    const supabase = this.supabaseService.getClient();
+    
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) {
+      this.logger.error(`Password reset failed: ${error.message}`);
+      throw new BadRequestException('Failed to reset password');
     }
 
     return {
@@ -244,32 +247,41 @@ export class AuthService {
     };
   }
 
+  /**
+   * Change password (for authenticated users)
+   */
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
-    // Find user
-    let foundUser: MockUser | undefined;
-    mockUsers.forEach((user) => {
-      if (user.id === userId) {
-        foundUser = user;
-      }
-    });
-
-    if (!foundUser) {
-      throw new UnauthorizedException('User not found');
-    }
-
-    // Verify current password
-    const isValidPassword = await bcrypt.compare(currentPassword, foundUser.password);
-    if (!isValidPassword) {
-      throw new BadRequestException('Current password is incorrect');
-    }
-
-    // Validate new password
     if (newPassword.length < 8) {
       throw new BadRequestException('New password must be at least 8 characters long');
     }
 
-    // Hash and update password
-    foundUser.password = await bcrypt.hash(newPassword, 10);
+    // Get the user's email
+    const appUser = await this.supabaseService.getAppUser(userId);
+    
+    if (!appUser) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Verify current password by attempting to sign in
+    const supabase = this.supabaseService.getClient();
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: appUser.email,
+      password: currentPassword,
+    });
+
+    if (verifyError) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    // Update password
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) {
+      this.logger.error(`Password change failed: ${error.message}`);
+      throw new BadRequestException('Failed to change password');
+    }
 
     return {
       success: true,

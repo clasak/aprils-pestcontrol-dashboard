@@ -1,3 +1,14 @@
+/**
+ * Database Configuration
+ * 
+ * CompassIQ Hybrid Architecture:
+ * TypeORM connects to Supabase PostgreSQL for complex queries.
+ * Simple CRUD operations use Supabase client with RLS.
+ * 
+ * Local Development: Connects to Supabase local (port 54322)
+ * Production: Connects to Supabase Cloud
+ */
+
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { config } from 'dotenv';
 import * as path from 'path';
@@ -6,30 +17,38 @@ import * as path from 'path';
 config();
 
 const isProduction = process.env.NODE_ENV === 'production';
+const isLocalSupabase = (process.env.DATABASE_URL || '').includes('54322') || 
+                        (process.env.DATABASE_URL || '').includes('localhost');
+
+// Default to Supabase local PostgreSQL port
+const defaultDatabaseUrl = 'postgresql://postgres:postgres@localhost:54322/postgres';
 
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
-  url: process.env.DATABASE_URL,
+  url: process.env.DATABASE_URL || defaultDatabaseUrl,
 
   // Connection pool configuration
   poolSize: parseInt(process.env.DATABASE_POOL_MAX || '10', 10),
 
-  // Entity configuration
-  entities: [path.join(__dirname, '../database/entities/**/*.entity{.ts,.js}')],
+  // Entity configuration - now in modules directory
+  entities: [
+    path.join(__dirname, '../modules/**/entities/*.entity{.ts,.js}'),
+    path.join(__dirname, '../database/entities/**/*.entity{.ts,.js}'),
+  ],
 
-  // Migration configuration
+  // Migration configuration - using Supabase migrations instead
   migrations: [path.join(__dirname, '../database/migrations/**/*{.ts,.js}')],
   migrationsTableName: 'migrations_history',
-  migrationsRun: false, // We'll run migrations manually
+  migrationsRun: false, // Supabase handles migrations
 
   // Logging
-  logging: !isProduction ? ['query', 'error', 'warn', 'migration'] : ['error', 'warn'],
+  logging: !isProduction ? ['query', 'error', 'warn'] : ['error', 'warn'],
   logger: 'advanced-console',
 
   // Schema configuration
   schema: 'public',
 
-  // Synchronization - NEVER use in production
+  // Synchronization - NEVER use (Supabase migrations handle schema)
   synchronize: false,
 
   // Connection options
@@ -44,17 +63,11 @@ export const dataSourceOptions: DataSourceOptions = {
     // PostgreSQL-specific settings
     statement_timeout: 30000, // 30 seconds
     query_timeout: 30000,
-    application_name: 'pestcontrol_crm',
+    application_name: 'compassiq_crm',
   },
 
-  // Enable cache for query results (uses in-memory cache)
-  cache: {
-    type: 'redis',
-    options: {
-      url: process.env.REDIS_URL || 'redis://localhost:6379',
-      duration: 60000, // 1 minute default cache duration
-    },
-  },
+  // Disable Redis cache for now (Supabase handles caching)
+  cache: false,
 };
 
 // Create and export the DataSource

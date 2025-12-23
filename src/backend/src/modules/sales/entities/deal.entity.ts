@@ -42,18 +42,18 @@ export enum ServiceFrequency {
   CUSTOM = 'custom',
 }
 
-@Entity({ schema: 'sales', name: 'deals' })
+@Entity({ schema: 'public', name: 'opportunities' })
 @Index(['status'])
 @Index(['stage'])
-@Index(['assigned_to'])
+@Index(['owner_id'])
 @Index(['expected_close_date'])
-@Index(['company_id'])
+@Index(['org_id'])
 export class Deal {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('uuid', { name: 'company_id' })
-  companyId: string;
+  @Column('uuid', { name: 'org_id' })
+  orgId: string;
 
   @Column('uuid', { name: 'contact_id' })
   contactId: string;
@@ -116,8 +116,8 @@ export class Deal {
   actualCloseDate?: Date;
 
   // Assignment & Ownership
-  @Column({ name: 'assigned_to', type: 'uuid', nullable: true })
-  assignedTo?: string;
+  @Column({ name: 'owner_id', type: 'uuid' })
+  ownerId: string;
 
   @Column({ name: 'sales_rep_id', type: 'uuid', nullable: true })
   salesRepId?: string;

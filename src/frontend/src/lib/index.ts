@@ -38,3 +38,27 @@ export type {
   ForecastCategory,
 } from './database.types';
 
+// Storage exports
+export {
+  uploadFile,
+  uploadFiles,
+  downloadFile,
+  getSignedUrl,
+  getSignedUrls,
+  getPublicUrl,
+  deleteFile,
+  deleteFiles,
+  listFiles,
+  moveFile,
+  copyFile,
+  uploadAvatar,
+  formatFileSize,
+  isAllowedFileType,
+  getAllowedTypes,
+  getMaxFileSize,
+  generateStoragePath,
+  STORAGE_BUCKETS,
+  ENTITY_TYPES,
+} from './storage';
+export type { StorageBucket, EntityType } from './storage';
+

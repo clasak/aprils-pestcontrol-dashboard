@@ -16,9 +16,9 @@ interface FindAllQuery {
   search?: string;
   status?: string;
   stage?: string;
-  assignedTo?: string;
+  ownerId?: string;
   salesRepId?: string;
-  companyId?: string;
+  orgId?: string;
   minValue?: number;
   maxValue?: number;
   fromDate?: string;
@@ -54,9 +54,9 @@ export class DealsService {
       search,
       status,
       stage,
-      assignedTo,
+      ownerId,
       salesRepId,
-      companyId,
+      orgId,
       minValue,
       maxValue,
       fromDate,
@@ -70,8 +70,8 @@ export class DealsService {
       .leftJoinAndSelect('deal.contact', 'contact')
       .where('deal.deleted_at IS NULL');
 
-    if (companyId) {
-      queryBuilder.andWhere('deal.company_id = :companyId', { companyId });
+    if (orgId) {
+      queryBuilder.andWhere('deal.org_id = :orgId', { orgId });
     }
 
     if (search) {
@@ -89,8 +89,8 @@ export class DealsService {
       queryBuilder.andWhere('deal.stage = :stage', { stage });
     }
 
-    if (assignedTo) {
-      queryBuilder.andWhere('deal.assigned_to = :assignedTo', { assignedTo });
+    if (ownerId) {
+      queryBuilder.andWhere('deal.owner_id = :ownerId', { ownerId });
     }
 
     if (salesRepId) {
@@ -138,15 +138,15 @@ export class DealsService {
     };
   }
 
-  async findOne(id: string, companyId?: string) {
+  async findOne(id: string, orgId?: string) {
     const queryBuilder = this.dealRepository
       .createQueryBuilder('deal')
       .leftJoinAndSelect('deal.contact', 'contact')
       .where('deal.id = :id', { id })
       .andWhere('deal.deleted_at IS NULL');
 
-    if (companyId) {
-      queryBuilder.andWhere('deal.company_id = :companyId', { companyId });
+    if (orgId) {
+      queryBuilder.andWhere('deal.org_id = :orgId', { orgId });
     }
 
     const deal = await queryBuilder.getOne();
@@ -214,12 +214,12 @@ export class DealsService {
     id: string,
     updateDealDto: UpdateDealDto,
     userId?: string,
-    companyId?: string,
+    orgId?: string,
   ) {
     const deal = await this.dealRepository.findOne({
       where: {
         id,
-        ...(companyId && { companyId }),
+        ...(orgId && { orgId }),
         deletedAt: IsNull(),
       },
     });
@@ -266,11 +266,11 @@ export class DealsService {
     };
   }
 
-  async remove(id: string, companyId?: string) {
+  async remove(id: string, orgId?: string) {
     const deal = await this.dealRepository.findOne({
       where: {
         id,
-        ...(companyId && { companyId }),
+        ...(orgId && { orgId }),
         deletedAt: IsNull(),
       },
     });
@@ -293,12 +293,12 @@ export class DealsService {
     id: string,
     newStage: DealStage,
     userId?: string,
-    companyId?: string,
+    orgId?: string,
   ) {
     const deal = await this.dealRepository.findOne({
       where: {
         id,
-        ...(companyId && { companyId }),
+        ...(orgId && { orgId }),
         deletedAt: IsNull(),
       },
     });
@@ -338,12 +338,12 @@ export class DealsService {
     id: string,
     wonReason?: string,
     userId?: string,
-    companyId?: string,
+    orgId?: string,
   ) {
     const deal = await this.dealRepository.findOne({
       where: {
         id,
-        ...(companyId && { companyId }),
+        ...(orgId && { orgId }),
         deletedAt: IsNull(),
       },
     });
@@ -375,12 +375,12 @@ export class DealsService {
     lostReason: string,
     lostToCompetitor?: string,
     userId?: string,
-    companyId?: string,
+    orgId?: string,
   ) {
     const deal = await this.dealRepository.findOne({
       where: {
         id,
-        ...(companyId && { companyId }),
+        ...(orgId && { orgId }),
         deletedAt: IsNull(),
       },
     });
@@ -408,14 +408,14 @@ export class DealsService {
     };
   }
 
-  async getPipelineView(companyId?: string) {
+  async getPipelineView(orgId?: string) {
     const queryBuilder = this.dealRepository
       .createQueryBuilder('deal')
       .where('deal.deleted_at IS NULL')
       .andWhere('deal.status = :status', { status: DealStatus.OPEN });
 
-    if (companyId) {
-      queryBuilder.andWhere('deal.company_id = :companyId', { companyId });
+    if (orgId) {
+      queryBuilder.andWhere('deal.org_id = :orgId', { orgId });
     }
 
     const deals = await queryBuilder.getMany();
@@ -452,14 +452,14 @@ export class DealsService {
     };
   }
 
-  async getForecast(companyId?: string) {
+  async getForecast(orgId?: string) {
     const queryBuilder = this.dealRepository
       .createQueryBuilder('deal')
       .where('deal.deleted_at IS NULL')
       .andWhere('deal.status = :status', { status: DealStatus.OPEN });
 
-    if (companyId) {
-      queryBuilder.andWhere('deal.company_id = :companyId', { companyId });
+    if (orgId) {
+      queryBuilder.andWhere('deal.org_id = :orgId', { orgId });
     }
 
     const deals = await queryBuilder.getMany();
@@ -499,13 +499,13 @@ export class DealsService {
     };
   }
 
-  async getStatistics(companyId?: string) {
+  async getStatistics(orgId?: string) {
     const queryBuilder = this.dealRepository
       .createQueryBuilder('deal')
       .where('deal.deleted_at IS NULL');
 
-    if (companyId) {
-      queryBuilder.andWhere('deal.company_id = :companyId', { companyId });
+    if (orgId) {
+      queryBuilder.andWhere('deal.org_id = :orgId', { orgId });
     }
 
     const total = await queryBuilder.getCount();

@@ -1,14 +1,39 @@
 version: '3.8'
 
+# =============================================================================
+# CompassIQ Docker Compose Configuration
+# =============================================================================
+# 
+# Hybrid Architecture:
+# - Supabase Local: Use `supabase start` for auth, database, storage, realtime
+# - NestJS Backend: Business logic, complex queries, integrations
+# - React Frontend: UI with Supabase client for auth and real-time
+#
+# Usage:
+#   Development with Supabase Local:
+#     1. Run `supabase start` first (handles database, auth, storage)
+#     2. Run `docker compose up backend frontend` for NestJS + React
+#
+#   Development without Supabase (legacy mode):
+#     Run `docker compose --profile legacy up` for standalone PostgreSQL
+#
+# =============================================================================
+
 services:
-  # PostgreSQL Database
+  # ==========================================================================
+  # LEGACY: Standalone PostgreSQL (use `supabase start` instead)
+  # ==========================================================================
+  # Only use this if you need a standalone PostgreSQL without Supabase
+  # Start with: docker compose --profile legacy up postgres
   postgres:
     image: postgres:15-alpine
-    container_name: pestcontrol-db
+    container_name: compassiq-db
+    profiles:
+      - legacy
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-      POSTGRES_DB: ${POSTGRES_DB:-pestcontrol_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-compassiq_dev}
       POSTGRES_INITDB_ARGS: "-E UTF8 --locale=en_US.utf8"
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -16,9 +41,9 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - pestcontrol-network
+      - compassiq-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-pestcontrol_dev}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-compassiq_dev}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -51,17 +76,19 @@ services:
       - "-c"
       - "max_wal_size=4GB"
 
-  # Redis Cache & Queue
+  # ==========================================================================
+  # Redis Cache & Queue (Optional - for caching and background jobs)
+  # ==========================================================================
   redis:
     image: redis:7-alpine
-    container_name: pestcontrol-redis
+    container_name: compassiq-redis
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-}
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     networks:
-      - pestcontrol-network
+      - compassiq-network
     healthcheck:
       test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
       interval: 10s
@@ -70,32 +97,42 @@ services:
       start_period: 20s
     restart: unless-stopped
 
-  # Backend API (NestJS)
+  # ==========================================================================
+  # Backend API (NestJS) - Hybrid Architecture
+  # ==========================================================================
+  # Connects to Supabase for auth/database, handles business logic
   backend:
     build:
       context: .
       dockerfile: src/backend/Dockerfile
       target: ${BUILD_TARGET:-development}
-    container_name: pestcontrol-backend
+    container_name: compassiq-backend
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 4000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-pestcontrol_dev}
+      # Supabase Configuration (local development defaults)
+      SUPABASE_URL: ${SUPABASE_URL:-http://host.docker.internal:54321}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
+      # Direct database connection (for TypeORM - Supabase local port 54322)
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@host.docker.internal:54322/postgres}
+      # Redis (optional)
       REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-key-change-in-production}
+      # JWT (must match Supabase JWT secret for local dev)
+      JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      # External services
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-}
       SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
-      FROM_EMAIL: ${FROM_EMAIL:-noreply@aprilspestcontrol.com}
+      FROM_EMAIL: ${FROM_EMAIL:-noreply@compassiq.com}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
-      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-}
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
     ports:
       - "${BACKEND_PORT:-4000}:4000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       # Hot reload for development
       - ./src/backend:/app/src/backend:delegated
@@ -103,12 +140,10 @@ services:
       - backend_node_modules:/app/node_modules
       - backend_src_node_modules:/app/src/backend/node_modules
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
-      - pestcontrol-network
+      - compassiq-network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4000/health"]
       interval: 30s
@@ -119,21 +154,35 @@ services:
     stdin_open: true
     tty: true
 
-  # Frontend Web App (React + Vite)
+  # ==========================================================================
+  # Frontend Web App (React + Vite) - Hybrid Architecture
+  # ==========================================================================
+  # Connects to Supabase for auth/realtime, NestJS for business logic
   frontend:
     build:
       context: .
       dockerfile: src/frontend/Dockerfile
       target: ${BUILD_TARGET:-development}
-    container_name: pestcontrol-frontend
+    container_name: compassiq-frontend
     environment:
       NODE_ENV: ${NODE_ENV:-development}
+      # Supabase Configuration (local development defaults)
+      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-http://127.0.0.1:54321}
+      VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0}
+      # NestJS API
       VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
       VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:4000}
+      # External services
       VITE_GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
       VITE_STRIPE_PUBLIC_KEY: ${STRIPE_PUBLIC_KEY:-}
+      # Feature flags
+      VITE_ENABLE_REAL_TIME: ${VITE_ENABLE_REAL_TIME:-true}
+      VITE_ENABLE_DEBUG: ${VITE_ENABLE_DEBUG:-true}
+      # Branding
+      VITE_APP_NAME: ${VITE_APP_NAME:-CompassIQ}
+      VITE_APP_TAGLINE: ${VITE_APP_TAGLINE:-Sales CRM & Operating System}
     ports:
-      - "${FRONTEND_PORT:-8080}:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     volumes:
       # Hot reload for development
       - ./src/frontend:/app/src/frontend:delegated
@@ -143,7 +192,7 @@ services:
     depends_on:
       - backend
     networks:
-      - pestcontrol-network
+      - compassiq-network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
       interval: 30s
@@ -154,31 +203,38 @@ services:
     stdin_open: true
     tty: true
 
-  # PostgreSQL Admin (pgAdmin) - Optional for development
+  # ==========================================================================
+  # Development Tools (Optional)
+  # ==========================================================================
+  # Start with: docker compose --profile tools up
+
+  # PostgreSQL Admin (pgAdmin) - For Supabase DB inspection
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: pestcontrol-pgadmin
+    container_name: compassiq-pgadmin
+    profiles:
+      - tools
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@aprilspestcontrol.com}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@compassiq.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
     ports:
       - "${PGADMIN_PORT:-5050}:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
-    depends_on:
-      - postgres
     networks:
-      - pestcontrol-network
+      - compassiq-network
     restart: unless-stopped
-    profiles:
-      - tools
 
-  # Redis Commander - Optional for development
+  # Redis Commander - For Redis inspection
   redis-commander:
     image: rediscommander/redis-commander:latest
-    container_name: pestcontrol-redis-commander
+    container_name: compassiq-redis-commander
+    profiles:
+      - tools
     environment:
       REDIS_HOSTS: local:redis:6379:0:${REDIS_PASSWORD:-}
     ports:
@@ -186,13 +242,14 @@ services:
     depends_on:
       - redis
     networks:
-      - pestcontrol-network
+      - compassiq-network
     restart: unless-stopped
-    profiles:
-      - tools
 
+# =============================================================================
+# Networks
+# =============================================================================
 networks:
-  pestcontrol-network:
+  compassiq-network:
     driver: bridge
     ipam:
       config:

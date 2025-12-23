@@ -435,7 +435,7 @@ export interface Database {
           lead_id: string | null;
           name: string;
           description: string | null;
-          stage: 'lead' | 'qualified' | 'quote_sent' | 'negotiation' | 'verbal_commitment' | 'closed_won' | 'closed_lost';
+          stage: OpportunityStage;
           status: 'open' | 'won' | 'lost';
           amount: number;
           probability: number;
@@ -461,6 +461,19 @@ export interface Database {
           created_at: string;
           updated_at: string;
           created_by: string | null;
+          // Pest control specific fields
+          service_address_line1: string | null;
+          service_city: string | null;
+          service_state: string | null;
+          service_postal_code: string | null;
+          property_type: string | null;
+          property_size_sqft: number | null;
+          pest_types: string[] | null;
+          inspection_scheduled_at: string | null;
+          inspection_completed_at: string | null;
+          inspection_notes: string | null;
+          monthly_value: number | null;
+          annual_value: number | null;
         };
         Insert: {
           id?: string;
@@ -470,7 +483,7 @@ export interface Database {
           lead_id?: string | null;
           name: string;
           description?: string | null;
-          stage?: 'lead' | 'qualified' | 'quote_sent' | 'negotiation' | 'verbal_commitment' | 'closed_won' | 'closed_lost';
+          stage?: OpportunityStage;
           status?: 'open' | 'won' | 'lost';
           amount?: number;
           probability?: number;
@@ -495,6 +508,18 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
           created_by?: string | null;
+          // Pest control specific fields
+          service_address_line1?: string | null;
+          service_city?: string | null;
+          service_state?: string | null;
+          service_postal_code?: string | null;
+          property_type?: string | null;
+          property_size_sqft?: number | null;
+          pest_types?: string[] | null;
+          inspection_scheduled_at?: string | null;
+          inspection_completed_at?: string | null;
+          inspection_notes?: string | null;
+          monthly_value?: number | null;
         };
         Update: {
           id?: string;
@@ -504,7 +529,7 @@ export interface Database {
           lead_id?: string | null;
           name?: string;
           description?: string | null;
-          stage?: 'lead' | 'qualified' | 'quote_sent' | 'negotiation' | 'verbal_commitment' | 'closed_won' | 'closed_lost';
+          stage?: OpportunityStage;
           status?: 'open' | 'won' | 'lost';
           amount?: number;
           probability?: number;
@@ -529,6 +554,18 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
           created_by?: string | null;
+          // Pest control specific fields
+          service_address_line1?: string | null;
+          service_city?: string | null;
+          service_state?: string | null;
+          service_postal_code?: string | null;
+          property_type?: string | null;
+          property_size_sqft?: number | null;
+          pest_types?: string[] | null;
+          inspection_scheduled_at?: string | null;
+          inspection_completed_at?: string | null;
+          inspection_notes?: string | null;
+          monthly_value?: number | null;
         };
       };
       opportunity_stage_history: {
@@ -874,10 +911,73 @@ export type LeadUpdate = Database['public']['Tables']['leads']['Update'];
 export type OpportunityUpdate = Database['public']['Tables']['opportunities']['Update'];
 export type ActivityUpdate = Database['public']['Tables']['activities']['Update'];
 
-// Stage types
-export type OpportunityStage = 'lead' | 'qualified' | 'quote_sent' | 'negotiation' | 'verbal_commitment' | 'closed_won' | 'closed_lost';
+// Stage types - 9-stage pest control pipeline
+export type OpportunityStage = 
+  | 'lead'                   // 10% probability - Initial inquiry or prospect
+  | 'inspection_scheduled'   // 15% probability - On-site inspection scheduled
+  | 'inspection_completed'   // 25% probability - Inspection done, preparing quote
+  | 'quote_sent'             // 50% probability - Proposal delivered to customer
+  | 'negotiation'            // 60% probability - Terms and pricing under discussion
+  | 'verbal_commitment'      // 75% probability - Customer verbally agreed
+  | 'contract_sent'          // 90% probability - Contract awaiting signature
+  | 'closed_won'             // 100% probability - Deal won
+  | 'closed_lost';           // 0% probability - Deal lost
+
 export type OpportunityStatus = 'open' | 'won' | 'lost';
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'unqualified' | 'nurturing' | 'converted' | 'lost';
 export type ActivityType = 'call' | 'email' | 'meeting' | 'task' | 'note';
 export type ForecastCategory = 'commit' | 'best_case' | 'pipeline';
+export type ServiceFrequency = 'one_time' | 'monthly' | 'bi_monthly' | 'quarterly' | 'annually';
+
+// Stage probability mapping
+export const STAGE_PROBABILITIES: Record<OpportunityStage, number> = {
+  lead: 10,
+  inspection_scheduled: 15,
+  inspection_completed: 25,
+  quote_sent: 50,
+  negotiation: 60,
+  verbal_commitment: 75,
+  contract_sent: 90,
+  closed_won: 100,
+  closed_lost: 0,
+};
+
+// Stage display names
+export const STAGE_DISPLAY_NAMES: Record<OpportunityStage, string> = {
+  lead: 'Lead',
+  inspection_scheduled: 'Inspection Scheduled',
+  inspection_completed: 'Inspection Completed',
+  quote_sent: 'Quote Sent',
+  negotiation: 'Negotiation',
+  verbal_commitment: 'Verbal Commitment',
+  contract_sent: 'Contract Sent',
+  closed_won: 'Closed Won',
+  closed_lost: 'Closed Lost',
+};
+
+// Stage colors for UI
+export const STAGE_COLORS: Record<OpportunityStage, string> = {
+  lead: '#9E9E9E',
+  inspection_scheduled: '#2196F3',
+  inspection_completed: '#03A9F4',
+  quote_sent: '#FF9800',
+  negotiation: '#FFC107',
+  verbal_commitment: '#8BC34A',
+  contract_sent: '#4CAF50',
+  closed_won: '#2E7D32',
+  closed_lost: '#F44336',
+};
+
+// Stage order for pipeline
+export const STAGE_ORDER: OpportunityStage[] = [
+  'lead',
+  'inspection_scheduled',
+  'inspection_completed',
+  'quote_sent',
+  'negotiation',
+  'verbal_commitment',
+  'contract_sent',
+  'closed_won',
+  'closed_lost',
+];
 

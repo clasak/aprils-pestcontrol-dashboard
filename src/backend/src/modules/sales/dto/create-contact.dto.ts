@@ -14,9 +14,9 @@ import {
 import { ContactType, ContactStatus } from '../entities/contact.entity';
 
 export class CreateContactDto {
-  @ApiProperty({ description: 'Company ID', example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiProperty({ description: 'Organization ID', example: '550e8400-e29b-41d4-a716-446655440000' })
   @IsString()
-  companyId: string;
+  orgId: string;
 
   @ApiProperty({ description: 'First name', example: 'John' })
   @IsString()

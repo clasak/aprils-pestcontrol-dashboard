@@ -17,7 +17,7 @@ interface FindAllQuery {
   type?: string;
   status?: string;
   tags?: string;
-  companyId?: string;
+  orgId?: string;
 }
 
 @Injectable()
@@ -37,7 +37,7 @@ export class ContactsService {
       type,
       status,
       tags,
-      companyId,
+      orgId,
     } = query;
 
     const skip = (page - 1) * limit;
@@ -46,9 +46,9 @@ export class ContactsService {
       .createQueryBuilder('contact')
       .where('contact.deleted_at IS NULL');
 
-    // Filter by company
-    if (companyId) {
-      queryBuilder.andWhere('contact.company_id = :companyId', { companyId });
+    // Filter by organization
+    if (orgId) {
+      queryBuilder.andWhere('contact.org_id = :orgId', { orgId });
     }
 
     // Search across multiple fields
@@ -97,14 +97,14 @@ export class ContactsService {
     };
   }
 
-  async findOne(id: string, companyId?: string) {
+  async findOne(id: string, orgId?: string) {
     const queryBuilder = this.contactRepository
       .createQueryBuilder('contact')
       .where('contact.id = :id', { id })
       .andWhere('contact.deleted_at IS NULL');
 
-    if (companyId) {
-      queryBuilder.andWhere('contact.company_id = :companyId', { companyId });
+    if (orgId) {
+      queryBuilder.andWhere('contact.org_id = :orgId', { orgId });
     }
 
     const contact = await queryBuilder.getOne();
@@ -126,7 +126,7 @@ export class ContactsService {
         const existingContact = await this.contactRepository.findOne({
           where: {
             email: createContactDto.email,
-            companyId: createContactDto.companyId,
+            orgId: createContactDto.orgId,
             deletedAt: IsNull(),
           },
         });
@@ -161,12 +161,12 @@ export class ContactsService {
     id: string,
     updateContactDto: UpdateContactDto,
     userId?: string,
-    companyId?: string,
+    orgId?: string,
   ) {
     const contact = await this.contactRepository.findOne({
       where: {
         id,
-        ...(companyId && { companyId }),
+        ...(orgId && { orgId }),
         deletedAt: IsNull(),
       },
     });
@@ -180,7 +180,7 @@ export class ContactsService {
       const existingContact = await this.contactRepository.findOne({
         where: {
           email: updateContactDto.email,
-          companyId: contact.companyId,
+          orgId: contact.orgId,
           deletedAt: IsNull(),
         },
       });
@@ -206,11 +206,11 @@ export class ContactsService {
     };
   }
 
-  async remove(id: string, companyId?: string) {
+  async remove(id: string, orgId?: string) {
     const contact = await this.contactRepository.findOne({
       where: {
         id,
-        ...(companyId && { companyId }),
+        ...(orgId && { orgId }),
         deletedAt: IsNull(),
       },
     });
@@ -229,11 +229,11 @@ export class ContactsService {
     };
   }
 
-  async restore(id: string, companyId?: string) {
+  async restore(id: string, orgId?: string) {
     const contact = await this.contactRepository.findOne({
       where: {
         id,
-        ...(companyId && { companyId }),
+        ...(orgId && { orgId }),
       },
       withDeleted: true,
     });
@@ -256,7 +256,7 @@ export class ContactsService {
     };
   }
 
-  async autocomplete(query: string, companyId?: string) {
+  async autocomplete(query: string, orgId?: string) {
     const queryBuilder = this.contactRepository
       .createQueryBuilder('contact')
       .select([
@@ -273,8 +273,8 @@ export class ContactsService {
         { query: `%${query}%` },
       );
 
-    if (companyId) {
-      queryBuilder.andWhere('contact.company_id = :companyId', { companyId });
+    if (orgId) {
+      queryBuilder.andWhere('contact.org_id = :orgId', { orgId });
     }
 
     const contacts = await queryBuilder.take(10).getMany();
@@ -291,13 +291,13 @@ export class ContactsService {
     };
   }
 
-  async exportToCsv(companyId?: string) {
+  async exportToCsv(orgId?: string) {
     const queryBuilder = this.contactRepository
       .createQueryBuilder('contact')
       .where('contact.deleted_at IS NULL');
 
-    if (companyId) {
-      queryBuilder.andWhere('contact.company_id = :companyId', { companyId });
+    if (orgId) {
+      queryBuilder.andWhere('contact.org_id = :orgId', { orgId });
     }
 
     const contacts = await queryBuilder.getMany();
@@ -336,13 +336,13 @@ export class ContactsService {
     };
   }
 
-  async getStatistics(companyId?: string) {
+  async getStatistics(orgId?: string) {
     const queryBuilder = this.contactRepository
       .createQueryBuilder('contact')
       .where('contact.deleted_at IS NULL');
 
-    if (companyId) {
-      queryBuilder.andWhere('contact.company_id = :companyId', { companyId });
+    if (orgId) {
+      queryBuilder.andWhere('contact.org_id = :orgId', { orgId });
     }
 
     const total = await queryBuilder.getCount();

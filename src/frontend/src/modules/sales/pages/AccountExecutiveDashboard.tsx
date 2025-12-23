@@ -82,6 +82,7 @@ const AccountExecutiveDashboard: React.FC = () => {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<PersonalStats | null>(null);
   const [pipelineData, setPipelineData] = useState<any[]>([]);
   const [upcomingTasks, setUpcomingTasks] = useState<Activity[]>([]);
@@ -89,10 +90,11 @@ const AccountExecutiveDashboard: React.FC = () => {
   const [myLeads, setMyLeads] = useState<Lead[]>([]);
 
   const loadDashboardData = async () => {
-    if (!profile?.id) return;
-
+    setError(null);
+    
     try {
-      const userId = profile.id;
+      // Use profile.id if available, otherwise load all data (for demo/testing)
+      const userId = profile?.id;
 
       // Load personal statistics
       const [oppStats, activityStats, pipeline, noNextStep, overdueTasks, dueTodayTasks] = await Promise.all([
@@ -132,8 +134,25 @@ const AccountExecutiveDashboard: React.FC = () => {
       setUpcomingTasks([...overdueTasks, ...dueTodayTasks].slice(0, 5));
       setMyLeads(leads.slice(0, 5));
 
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error);
+    } catch (err) {
+      console.error('Failed to load dashboard data:', err);
+      setError('Unable to load dashboard data. Please try again.');
+      // Set empty defaults so page still renders
+      setStats({
+        pipelineValue: 0,
+        weightedPipeline: 0,
+        openOpportunities: 0,
+        wonThisMonth: 0,
+        wonValueThisMonth: 0,
+        winRate: 0,
+        tasksOverdue: 0,
+        tasksDueToday: 0,
+        leadsDueFollowUp: 0,
+      });
+      setPipelineData([]);
+      setOpportunitiesNoNextStep([]);
+      setUpcomingTasks([]);
+      setMyLeads([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -210,6 +229,13 @@ const AccountExecutiveDashboard: React.FC = () => {
           </Tooltip>
         </Box>
       </Box>
+
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
       {/* Urgent Alerts */}
       {urgentItemsCount > 0 && (
@@ -314,23 +340,42 @@ const AccountExecutiveDashboard: React.FC = () => {
           <Card>
             <CardHeader title="My Pipeline by Stage" />
             <CardContent sx={{ height: 250 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={pipelineData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                  <RechartsTooltip
-                    formatter={(value: number) => [formatCurrency(value), 'Value']}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="value" 
-                    stroke="#1976d2" 
-                    fill="#1976d2" 
-                    fillOpacity={0.3}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              {pipelineData.length === 0 || pipelineData.every(d => d.value === 0) ? (
+                <Box 
+                  sx={{ 
+                    height: '100%', 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    color: 'text.secondary'
+                  }}
+                >
+                  <TrendingUpIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
+                  <Typography variant="body1">No pipeline data yet</Typography>
+                  <Typography variant="body2">
+                    Create opportunities to see your pipeline here
+                  </Typography>
+                </Box>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={pipelineData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                    <RechartsTooltip
+                      formatter={(value: number) => [formatCurrency(value), 'Value']}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="value" 
+                      stroke="#1976d2" 
+                      fill="#1976d2" 
+                      fillOpacity={0.3}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
         </Grid>

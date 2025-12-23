@@ -23,3 +23,6 @@ export * from './FormField';
 
 // Export dev tools
 export { default as DevUserSwitcher } from './DevUserSwitcher';
+
+// Export file upload component
+export { default as FileUpload } from './FileUpload';

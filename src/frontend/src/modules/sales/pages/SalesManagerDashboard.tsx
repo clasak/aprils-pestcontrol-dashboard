@@ -89,6 +89,7 @@ const SalesManagerDashboard: React.FC = () => {
   const { isManager, isAdmin } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [pipelineData, setPipelineData] = useState<any[]>([]);
   const [stalledOpportunities, setStalledOpportunities] = useState<Opportunity[]>([]);
@@ -96,6 +97,8 @@ const SalesManagerDashboard: React.FC = () => {
   const [hotLeads, setHotLeads] = useState<Lead[]>([]);
 
   const loadDashboardData = async () => {
+    setError(null);
+    
     try {
       // Load statistics
       const [oppStats, leadStats, activityStats, stalledOpps, noNextStep, pipeline] = await Promise.all([
@@ -136,8 +139,24 @@ const SalesManagerDashboard: React.FC = () => {
       const leads = await leadsService.getAll({ minScore: 70, limit: 5 });
       setHotLeads(leads.data);
 
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error);
+    } catch (err) {
+      console.error('Failed to load dashboard data:', err);
+      setError('Unable to load dashboard data. Please try again.');
+      // Set empty defaults so page still renders
+      setStats({
+        pipelineValue: 0,
+        weightedPipeline: 0,
+        pipelineCoverage: 0,
+        winRate: 0,
+        avgDealSize: 0,
+        openOpportunities: 0,
+        closedWonThisMonth: 0,
+        closedLostThisMonth: 0,
+      });
+      setPipelineData([]);
+      setStalledOpportunities([]);
+      setNoNextStepOpportunities([]);
+      setHotLeads([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -206,6 +225,13 @@ const SalesManagerDashboard: React.FC = () => {
           </Tooltip>
         </Box>
       </Box>
+
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
       {/* KPI Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
@@ -282,17 +308,39 @@ const SalesManagerDashboard: React.FC = () => {
           <Card>
             <CardHeader title="Pipeline by Stage" />
             <CardContent sx={{ height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={pipelineData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                  <YAxis type="category" dataKey="name" width={100} />
-                  <RechartsTooltip
-                    formatter={(value: number) => [formatCurrency(value), 'Value']}
-                  />
-                  <Bar dataKey="value" fill="#1976d2" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {pipelineData.length === 0 || pipelineData.every(d => d.value === 0) ? (
+                <Box 
+                  sx={{ 
+                    height: '100%', 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    color: 'text.secondary',
+                    border: '2px dashed',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                  }}
+                >
+                  <TrendingUpIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
+                  <Typography variant="body1">No pipeline data yet</Typography>
+                  <Typography variant="body2">
+                    Create opportunities to see the pipeline chart
+                  </Typography>
+                </Box>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={pipelineData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                    <YAxis type="category" dataKey="name" width={100} />
+                    <RechartsTooltip
+                      formatter={(value: number) => [formatCurrency(value), 'Value']}
+                    />
+                    <Bar dataKey="value" fill="#1976d2" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
         </Grid>

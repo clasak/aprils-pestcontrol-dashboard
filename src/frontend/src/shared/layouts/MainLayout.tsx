@@ -48,6 +48,7 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import GroupsIcon from '@mui/icons-material/Groups';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { useThemeMode } from '../theme/ThemeContext';
 import { DevUserSwitcher } from '../components';
 
@@ -67,7 +68,6 @@ const navigationItems: NavItem[] = [
     name: 'Sales',
     path: '/sales',
     icon: <TrendingUpIcon />,
-    badge: 5,
     children: [
       { name: 'Dashboard', path: '/sales', icon: <LeaderboardIcon /> },
       { name: 'Team Overview', path: '/sales/team', icon: <GroupsIcon /> },
@@ -97,7 +97,17 @@ const navigationItems: NavItem[] = [
   { name: 'Inventory', path: '/inventory', icon: <InventoryIcon /> },
   { name: 'Marketing', path: '/marketing', icon: <CampaignIcon /> },
   { name: 'Compliance', path: '/compliance', icon: <VerifiedUserIcon /> },
-  { name: 'Admin', path: '/admin', icon: <SettingsIcon /> },
+  {
+    name: 'Admin',
+    path: '/admin',
+    icon: <SettingsIcon />,
+    children: [
+      { name: 'Dashboard', path: '/admin', icon: <LeaderboardIcon /> },
+      { name: 'Users', path: '/admin/users', icon: <PeopleIcon /> },
+      { name: 'Import Data', path: '/admin/import', icon: <UploadFileIcon /> },
+      { name: 'Settings', path: '/admin/settings', icon: <SettingsIcon /> },
+    ],
+  },
 ];
 
 // Helper to get breadcrumb path
@@ -289,6 +299,47 @@ const MainLayout = () => {
             </Typography>
           </Box>
         </Box>
+      </Box>
+
+      {/* Powered by CompassIQ Branding */}
+      <Box 
+        sx={{ 
+          px: 2, 
+          py: 1.5, 
+          borderTop: 1, 
+          borderColor: 'divider',
+          bgcolor: 'action.hover',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 0.5,
+        }}
+      >
+        <Typography 
+          variant="caption" 
+          color="text.secondary"
+          sx={{ opacity: 0.7 }}
+        >
+          Powered by
+        </Typography>
+        <Box
+          component="img"
+          src="/compassiq-logo.svg"
+          alt="CompassIQ"
+          sx={{
+            height: 16,
+            width: 'auto',
+            opacity: 0.8,
+          }}
+        />
+        <Typography 
+          variant="caption" 
+          fontWeight={600}
+          color="text.secondary"
+          sx={{ opacity: 0.8 }}
+        >
+          CompassIQ
+        </Typography>
       </Box>
     </Box>
   );

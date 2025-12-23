@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Grid,
@@ -16,6 +16,7 @@ import {
   Chip,
   Divider,
   LinearProgress,
+  Tooltip,
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -25,10 +26,13 @@ import {
   Star as StarIcon,
   CheckCircle as CheckCircleIcon,
   Schedule as ScheduleIcon,
+  Wifi as WifiIcon,
+  WifiOff as WifiOffIcon,
 } from '@mui/icons-material';
 import { contactsApi } from '../services/contacts.api';
 import { leadsApi } from '../services/leads.api';
 import { dealsApi } from '../services/deals.api';
+import { useRealtimeDeals } from '../hooks/useRealtimeDeals';
 
 interface MetricCardProps {
   title: string;
@@ -94,32 +98,43 @@ export const SalesDashboardPage: React.FC = () => {
   const [leadStats, setLeadStats] = useState<any>(null);
   const [dealStats, setDealStats] = useState<any>(null);
   const [forecast, setForecast] = useState<any>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+
+  const fetchDashboardData = useCallback(async () => {
+    setError(null);
+    try {
+      const [contactsRes, leadsRes, dealsRes, forecastRes] = await Promise.all([
+        contactsApi.getStatistics().catch(() => null),
+        leadsApi.getStatistics().catch(() => null),
+        dealsApi.getStatistics().catch(() => null),
+        dealsApi.getForecast().catch(() => null),
+      ]);
+
+      if (contactsRes) setContactStats(contactsRes.data);
+      if (leadsRes) setLeadStats(leadsRes.data);
+      if (dealsRes) setDealStats(dealsRes.data);
+      if (forecastRes) setForecast(forecastRes.data);
+      setLastRefresh(new Date());
+    } catch (err: any) {
+      setError(err.message || 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Real-time subscription for live updates
+  const { isConnected: realtimeConnected } = useRealtimeDeals({
+    enabled: true,
+    onAnyChange: () => {
+      // Refresh dashboard stats when any deal changes
+      fetchDashboardData();
+    },
+  });
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const [contactsRes, leadsRes, dealsRes, forecastRes] = await Promise.all([
-          contactsApi.getStatistics().catch(() => null),
-          leadsApi.getStatistics().catch(() => null),
-          dealsApi.getStatistics().catch(() => null),
-          dealsApi.getForecast().catch(() => null),
-        ]);
-
-        if (contactsRes) setContactStats(contactsRes.data);
-        if (leadsRes) setLeadStats(leadsRes.data);
-        if (dealsRes) setDealStats(dealsRes.data);
-        if (forecastRes) setForecast(forecastRes.data);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load dashboard data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    setLoading(true);
     fetchDashboardData();
-  }, []);
+  }, [fetchDashboardData]);
 
   const formatCurrency = (value: number) => {
     return `$${value.toLocaleString('en-US', {
@@ -140,11 +155,23 @@ export const SalesDashboardPage: React.FC = () => {
     <Box>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Sales Dashboard
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+          <Typography variant="h4" component="h1">
+            Sales Dashboard
+          </Typography>
+          <Tooltip title={realtimeConnected ? 'Live updates enabled' : 'Live updates disconnected'}>
+            <Chip
+              icon={realtimeConnected ? <WifiIcon /> : <WifiOffIcon />}
+              label={realtimeConnected ? 'Live' : 'Offline'}
+              size="small"
+              color={realtimeConnected ? 'success' : 'default'}
+              variant="outlined"
+            />
+          </Tooltip>
+        </Box>
         <Typography variant="body1" color="text.secondary">
           Overview of your sales performance and pipeline
+          {realtimeConnected && ` • Last updated: ${lastRefresh.toLocaleTimeString()}`}
         </Typography>
       </Box>
 

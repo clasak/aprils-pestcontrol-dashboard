@@ -37,19 +37,19 @@ export enum ServiceFrequency {
   CUSTOM = 'custom',
 }
 
-@Entity({ schema: 'sales', name: 'quotes' })
+@Entity({ schema: 'public', name: 'quotes' })
 @Index(['status'])
 @Index(['contact_id'])
 @Index(['deal_id'])
-@Index(['company_id'])
+@Index(['org_id'])
 @Index(['quote_number'])
 @Index(['valid_until'])
 export class Quote {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('uuid', { name: 'company_id' })
-  companyId: string;
+  @Column('uuid', { name: 'org_id' })
+  orgId: string;
 
   @Column({ name: 'quote_number', type: 'varchar', length: 50 })
   quoteNumber: string;

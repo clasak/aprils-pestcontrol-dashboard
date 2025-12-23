@@ -115,18 +115,51 @@ const AuthLayout = () => {
             <Outlet />
           </Paper>
 
-          {/* Footer */}
-          <Typography
-            variant="caption"
+          {/* Footer with CompassIQ Branding */}
+          <Box
             sx={{
-              display: 'block',
-              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 1,
               mt: 3,
-              color: isMobile ? 'white' : 'rgba(255,255,255,0.7)',
             }}
           >
-            © {new Date().getFullYear()} CompassIQ. All rights reserved.
-          </Typography>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                color: isMobile ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.7)',
+              }}
+            >
+              <Typography variant="caption">
+                Powered by
+              </Typography>
+              <Box
+                component="img"
+                src="/compassiq-logo.svg"
+                alt="CompassIQ"
+                sx={{
+                  height: 14,
+                  width: 'auto',
+                  filter: 'brightness(0) invert(1)',
+                  opacity: 0.9,
+                }}
+              />
+              <Typography variant="caption" fontWeight={600}>
+                CompassIQ
+              </Typography>
+            </Box>
+            <Typography
+              variant="caption"
+              sx={{
+                color: isMobile ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.5)',
+              }}
+            >
+              © {new Date().getFullYear()} All rights reserved.
+            </Typography>
+          </Box>
         </Container>
       </Box>
     </Box>

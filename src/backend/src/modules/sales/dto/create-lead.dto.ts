@@ -20,9 +20,9 @@ import {
 } from '../entities/lead.entity';
 
 export class CreateLeadDto {
-  @ApiProperty({ description: 'Company ID' })
+  @ApiProperty({ description: 'Organization ID' })
   @IsUUID()
-  companyId: string;
+  orgId: string;
 
   @ApiProperty({ description: 'Contact ID' })
   @IsUUID()

@@ -37,18 +37,18 @@ export enum LeadPriority {
   URGENT = 'urgent',
 }
 
-@Entity({ schema: 'sales', name: 'leads' })
+@Entity({ schema: 'public', name: 'leads' })
 @Index(['status'])
 @Index(['assigned_to'])
 @Index(['lead_score'])
 @Index(['created_at'])
-@Index(['company_id'])
+@Index(['org_id'])
 export class Lead {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('uuid', { name: 'company_id' })
-  companyId: string;
+  @Column('uuid', { name: 'org_id' })
+  orgId: string;
 
   @Column('uuid', { name: 'contact_id' })
   contactId: string;

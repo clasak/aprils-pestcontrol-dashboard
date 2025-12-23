@@ -1,1 +1,2 @@
-// Admin module components will be exported here
+// Admin module components
+export { default as CSVImporter } from './CSVImporter';

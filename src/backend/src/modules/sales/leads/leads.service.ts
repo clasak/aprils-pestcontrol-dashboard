@@ -17,7 +17,7 @@ interface FindAllQuery {
   status?: string;
   assignedTo?: string;
   priority?: string;
-  companyId?: string;
+  orgId?: string;
   minScore?: number;
   maxScore?: number;
   fromDate?: string;
@@ -41,7 +41,7 @@ export class LeadsService {
       status,
       assignedTo,
       priority,
-      companyId,
+      orgId,
       minScore,
       maxScore,
       fromDate,
@@ -55,8 +55,8 @@ export class LeadsService {
       .leftJoinAndSelect('lead.contact', 'contact')
       .where('lead.deleted_at IS NULL');
 
-    if (companyId) {
-      queryBuilder.andWhere('lead.company_id = :companyId', { companyId });
+    if (orgId) {
+      queryBuilder.andWhere('lead.org_id = :orgId', { orgId });
     }
 
     if (search) {
@@ -115,15 +115,15 @@ export class LeadsService {
     };
   }
 
-  async findOne(id: string, companyId?: string) {
+  async findOne(id: string, orgId?: string) {
     const queryBuilder = this.leadRepository
       .createQueryBuilder('lead')
       .leftJoinAndSelect('lead.contact', 'contact')
       .where('lead.id = :id', { id })
       .andWhere('lead.deleted_at IS NULL');
 
-    if (companyId) {
-      queryBuilder.andWhere('lead.company_id = :companyId', { companyId });
+    if (orgId) {
+      queryBuilder.andWhere('lead.org_id = :orgId', { orgId });
     }
 
     const lead = await queryBuilder.getOne();
@@ -169,12 +169,12 @@ export class LeadsService {
     id: string,
     updateLeadDto: UpdateLeadDto,
     userId?: string,
-    companyId?: string,
+    orgId?: string,
   ) {
     const lead = await this.leadRepository.findOne({
       where: {
         id,
-        ...(companyId && { companyId }),
+        ...(orgId && { orgId }),
         deletedAt: IsNull(),
       },
     });
@@ -209,11 +209,11 @@ export class LeadsService {
     };
   }
 
-  async remove(id: string, companyId?: string) {
+  async remove(id: string, orgId?: string) {
     const lead = await this.leadRepository.findOne({
       where: {
         id,
-        ...(companyId && { companyId }),
+        ...(orgId && { orgId }),
         deletedAt: IsNull(),
       },
     });
@@ -236,12 +236,12 @@ export class LeadsService {
     id: string,
     assignedTo: string,
     userId?: string,
-    companyId?: string,
+    orgId?: string,
   ) {
     const lead = await this.leadRepository.findOne({
       where: {
         id,
-        ...(companyId && { companyId }),
+        ...(orgId && { orgId }),
         deletedAt: IsNull(),
       },
     });
@@ -269,12 +269,12 @@ export class LeadsService {
     isQualified: boolean,
     notes?: string,
     userId?: string,
-    companyId?: string,
+    orgId?: string,
   ) {
     const lead = await this.leadRepository.findOne({
       where: {
         id,
-        ...(companyId && { companyId }),
+        ...(orgId && { orgId }),
         deletedAt: IsNull(),
       },
     });
@@ -298,11 +298,11 @@ export class LeadsService {
     };
   }
 
-  async convertToDeal(id: string, dealId: string, userId?: string, companyId?: string) {
+  async convertToDeal(id: string, dealId: string, userId?: string, orgId?: string) {
     const lead = await this.leadRepository.findOne({
       where: {
         id,
-        ...(companyId && { companyId }),
+        ...(orgId && { orgId }),
         deletedAt: IsNull(),
       },
     });
@@ -330,12 +330,12 @@ export class LeadsService {
     id: string,
     reason: string,
     userId?: string,
-    companyId?: string,
+    orgId?: string,
   ) {
     const lead = await this.leadRepository.findOne({
       where: {
         id,
-        ...(companyId && { companyId }),
+        ...(orgId && { orgId }),
         deletedAt: IsNull(),
       },
     });
@@ -359,13 +359,13 @@ export class LeadsService {
     };
   }
 
-  async getLeadStatistics(companyId?: string) {
+  async getLeadStatistics(orgId?: string) {
     const queryBuilder = this.leadRepository
       .createQueryBuilder('lead')
       .where('lead.deleted_at IS NULL');
 
-    if (companyId) {
-      queryBuilder.andWhere('lead.company_id = :companyId', { companyId });
+    if (orgId) {
+      queryBuilder.andWhere('lead.org_id = :orgId', { orgId });
     }
 
     const total = await queryBuilder.getCount();

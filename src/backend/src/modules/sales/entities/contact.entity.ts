@@ -25,18 +25,18 @@ export enum ContactStatus {
   DO_NOT_CONTACT = 'do_not_contact',
 }
 
-@Entity({ schema: 'sales', name: 'contacts' })
+@Entity({ schema: 'public', name: 'contacts' })
 @Index(['email'])
 @Index(['phone'])
-@Index(['company_id'])
+@Index(['org_id'])
 @Index(['type'])
 @Index(['created_at'])
 export class Contact {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('uuid', { name: 'company_id' })
-  companyId: string;
+  @Column('uuid', { name: 'org_id' })
+  orgId: string;
 
   // Personal Information
   @Column({ name: 'first_name', type: 'varchar', length: 100 })

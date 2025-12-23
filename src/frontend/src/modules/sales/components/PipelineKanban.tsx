@@ -20,6 +20,7 @@ import {
   Tooltip,
   LinearProgress,
   Snackbar,
+  Badge,
 } from '@mui/material';
 import {
   MoreVert as MoreVertIcon,
@@ -34,8 +35,11 @@ import {
   Business as BusinessIcon,
   BugReport as PestIcon,
   ArrowForward as ArrowForwardIcon,
+  Wifi as WifiIcon,
+  WifiOff as WifiOffIcon,
 } from '@mui/icons-material';
 import { dealsApi, Deal } from '../services/deals.api';
+import { useRealtimeDeals } from '../hooks/useRealtimeDeals';
 
 interface StageColumn {
   id: string;
@@ -97,6 +101,41 @@ export const PipelineKanban: React.FC = () => {
       setLoading(false);
     }
   }, []);
+
+  // Real-time subscription for live updates
+  const { isConnected: realtimeConnected, lastEvent, error: realtimeError } = useRealtimeDeals({
+    enabled: true,
+    onAnyChange: () => {
+      // Refresh the pipeline when any deal changes
+      fetchPipeline();
+    },
+  });
+
+  // Show notification for real-time updates
+  useEffect(() => {
+    if (lastEvent && lastEvent.deal) {
+      const dealTitle = lastEvent.deal.title || 'Deal';
+      let message = '';
+      
+      switch (lastEvent.type) {
+        case 'INSERT':
+          message = `New deal added: ${dealTitle}`;
+          break;
+        case 'UPDATE':
+          if (lastEvent.oldDeal && lastEvent.oldDeal.stage !== lastEvent.deal.stage) {
+            message = `${dealTitle} moved to ${STAGE_CONFIG.find(s => s.id === lastEvent.deal?.stage)?.name || lastEvent.deal.stage}`;
+          }
+          break;
+        case 'DELETE':
+          message = `Deal removed: ${dealTitle}`;
+          break;
+      }
+      
+      if (message) {
+        setSnackbarMessage(message);
+      }
+    }
+  }, [lastEvent]);
 
   useEffect(() => {
     fetchPipeline();
@@ -308,11 +347,24 @@ export const PipelineKanban: React.FC = () => {
 
       {/* Header */}
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h5" component="h1" gutterBottom>
-          Sales Pipeline
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Typography variant="h5" component="h1">
+            Sales Pipeline
+          </Typography>
+          <Tooltip title={realtimeConnected ? 'Live updates enabled' : 'Live updates disconnected'}>
+            <Chip
+              icon={realtimeConnected ? <WifiIcon /> : <WifiOffIcon />}
+              label={realtimeConnected ? 'Live' : 'Offline'}
+              size="small"
+              color={realtimeConnected ? 'success' : 'default'}
+              variant="outlined"
+              sx={{ ml: 1 }}
+            />
+          </Tooltip>
+        </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Drag and drop deals between stages to update their status
+          {realtimeConnected && ' • Changes sync automatically'}
         </Typography>
         {summary && (
           <Box sx={{ display: 'flex', gap: 3, mt: 2, flexWrap: 'wrap' }}>
